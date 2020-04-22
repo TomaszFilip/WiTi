@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 using std::vector;
 using std::cin;
@@ -19,6 +20,20 @@ public:
 	}
 };
 
+bool sortcol(const vector<int>& v1, const vector<int>& v2) {
+	return v1[3] < v2[3];
+}
+void sortD(Dane& dane, vector<int>& permutacja)
+{
+	Dane backup = dane;
+	sort((dane.zadania).begin(), (dane.zadania).end(), sortcol);
+	for (int unsigned i = 0; i < permutacja.size();i++)
+	{
+		permutacja[i] = dane.zadania[i][0];
+	}
+	dane = backup;
+}
+
 int obliczKare(vector<int> permutacja, Dane dane)
 {
 	int czas = 0; 
@@ -27,16 +42,16 @@ int obliczKare(vector<int> permutacja, Dane dane)
 	//uzupelniamy wektor spoznien dla kazdego zadania
 	for (int i = 0;i < permutacja.size();i++)
 	{
-		czas += dane.zadania[i][1];
-		if (dane.zadania[i][3] < czas)
+		czas += dane.zadania[permutacja[i]][1];
+		if (dane.zadania[permutacja[i]][3] < czas)
 		{
-			spoznienia[i] = czas - dane.zadania[i][3];
+			spoznienia[i] = czas - dane.zadania[permutacja[i]][3];
 		}
 	}
 	//kara jest rowna sumie spoznien pomnozonych przez wagi
 	for (int i = 0;i < permutacja.size();i++)
 	{
-		kara += (spoznienia[i] * dane.zadania[i][2]);
+		kara += (spoznienia[i] * dane.zadania[permutacja[i]][2]);
 	}
 	return kara;
 }
@@ -64,18 +79,106 @@ Dane wczytajDanezpliku(const char nazwa[], int &iz, int &ip)
 	return _dane;
 }
 
-void przegladZupelny(Dane dane)
+void generujPermutacjeRekursywnie(int k, vector<int> zadania, Dane dane, int &minKara, vector<int> &optymalnaPermutacja)
 {
-	//TODO
-	vector<int> minKaraPermutacja;
-	vector<int> permutacja;
-	for (int i = 0;i < dane.ilezadan;i++)
+	if (k == 1)
 	{
-		permutacja.push_back()
+		int karaDlaPermutacji = obliczKare(zadania, dane);
+			if (karaDlaPermutacji < minKara)
+			{
+				minKara = karaDlaPermutacji;
+				optymalnaPermutacja = zadania;
+			}
+	}
+	else
+	{
+		generujPermutacjeRekursywnie(k - 1, zadania, dane, minKara, optymalnaPermutacja);
+		for (int i = 0; i < k - 1;i++)
+		{
+			if (k % 2 == 0)
+			{
+				swap(zadania[i], zadania[k - 1]);
+			}
+			else
+			{
+				swap(zadania[0], zadania[k - 1]);
+			}
+			generujPermutacjeRekursywnie(k - 1, zadania, dane, minKara, optymalnaPermutacja);
+		}
 	}
 }
+
+vector<int> przegladZupelnyRekursywnie(Dane dane)
+{
+	vector<int> permutacja;
+	for (int i = 0; i < dane.ilezadan;i++)
+	{
+		permutacja.push_back(i);
+	}
+	int minKara = obliczKare(permutacja, dane);
+	vector<int> idealnapermutacja = permutacja;
+
+	generujPermutacjeRekursywnie(permutacja.size(), permutacja, dane, minKara, idealnapermutacja);
+	return idealnapermutacja;
+}
 	
-		
+void generujPermutacjeIteracyjnie(vector<int> zadania, Dane dane, int& minKara, vector<int>& optymalnaPermutacja)
+{
+	int n = zadania.size();
+	vector<int> c(n, 0);
+	//sprawdzenie kary poczatkowej permutacji//
+	int karaDlaPermutacji = obliczKare(zadania, dane);
+	if (karaDlaPermutacji < minKara)
+	{
+		minKara = karaDlaPermutacji;
+		optymalnaPermutacja = zadania;
+	}
+	//										//
+	int i = 0;
+	while (i < n)
+	{
+		if (c[i] < i)
+		{
+			if (i % 2 == 0)
+			{
+				swap(zadania[0], zadania[i]);
+			}
+			else
+			{
+				swap(zadania[c[i]], zadania[i]);
+			}
+			//sprawdzenie kary obecnej permutacji//
+			karaDlaPermutacji = obliczKare(zadania, dane);
+			if (karaDlaPermutacji < minKara)
+			{
+				minKara = karaDlaPermutacji;
+				optymalnaPermutacja = zadania;
+			}
+			//									//
+			c[i]++;
+			i = 0;
+		}
+		else
+		{
+			c[i] = 0;
+			i++;
+		}
+	}
+}
+
+vector<int> przegladZupelnyIteracyjnie(Dane dane)
+{
+	vector<int> permutacja;
+	for (int i = 0; i < dane.ilezadan;i++)
+	{
+		permutacja.push_back(i);
+	}
+	int minKara = obliczKare(permutacja, dane);
+	vector<int> idealnapermutacja = permutacja;
+
+	generujPermutacjeIteracyjnie(permutacja, dane, minKara, idealnapermutacja);
+	return idealnapermutacja;
+}
 
 int main()
 {
@@ -93,6 +196,13 @@ int main()
 		permutacja.push_back(i);
 	}
 
-	cout<<obliczKare(permutacja, dane);
+	cout<<obliczKare(permutacja, dane)<<endl;
+	//funkcja przez rekursywny przeglad zupelny ustawi permutacje w optymalny sposob
+	vector<int> optymalnaPermutacja = przegladZupelnyIteracyjnie(dane);
+	cout << obliczKare(optymalnaPermutacja,dane)<<endl;
+	sortD(dane, permutacja);
+	cout << obliczKare(permutacja, dane) << endl;
+
+
 }
 
